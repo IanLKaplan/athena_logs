@@ -38,3 +38,86 @@ export AWS_ATHENA_KEY_ID
 export AWS_ATHENA_ACCESS_KEY
 ```
 
+## Amazon Partitions
+
+Athena scans all of the data, for every query. This many not be an issue for ORC files built from S3 web log data because the compression provided by the ORC file format results in every compact data. Due to the relatively small size of the S3 web log data in ORC format, the queries in this repository do not use partitioning.
+
+The amount of data scanned by an Athena query can be reduced by using partitioned data, which can be important for large amounts of data.  An Athena data partition is a prefix in the S3 file path. 
+
+
+I support several web sites via S3 static hosting. The [S3 Log Reader](https://github.com/IanLKaplan/s3logreader) allows the ORC data generated from the S3 web log data to be written to the ORC log file bucket.  To support partitioning a domain name prefix is included in the S3 file key (path) (e.g., bearcave.com and topstonesoftware.com).  This is shown below:
+
+```
+s3://ianlkaplan-logs.orc/user/iank/http_logs/bearcave.com/
+s3://ianlkaplan-logs.orc/user/iank/http_logs/topstonesoftware.com/
+```
+
+Athena queries will traverse all sub-directories.  For a table created with the following DDL, all of the ORC data will be searched.
+
+```
+create external table `orclogdb.httplogs` (
+    `bucket_name` string,
+    `request_date` timestamp,
+    `remote_ip` string,
+    `operation` string,
+    `key` string,
+    `request_uri` string,
+    `http_status` int,
+    `total_time` int,
+    `referrer` string,
+    `user_agent` string,
+    `version_id` string,
+    `end_point` string
+ )
+stored as ORC
+location 's3://ianlkaplan-logs.orc/user/iank/http_logs'
+tblproperties ("orc.compress"="ZLIB")
+
+```
+
+The queries in this repository the domain subset of the data with the where clause ```bucket_name = <domain name>```, for example ```bucket_name = 'bearcave.com'```
+
+A partition can be added in two steps:
+
+1. Load the following DDL
+
+```
+create external table `orclogdb.httplogs` (
+    `bucket_name` string,
+    `request_date` timestamp,
+    `remote_ip` string,
+    `operation` string,
+    `key` string,
+    `request_uri` string,
+    `http_status` int,
+    `total_time` int,
+    `referrer` string,
+    `user_agent` string,
+    `version_id` string,
+    `end_point` string
+ )
+partitioned by (domain string)
+stored as ORC
+location 's3://ianlkaplan-logs.orc/user/iank/http_logs'
+tblproperties ("orc.compress"="ZLIB")
+```
+
+This creates a partition, but this partition is not associated with a path prefix and a query against this table will not return any data.
+
+2. Associate the partition with S3 path prefixes using an add partition statement.
+
+```
+alter table orclogdb.httplogs add partition(domain='topstonesoftware.com') location 's3://ianlkaplan-logs.orc/user/iank/http_logs/topstonesoftware.com/'
+partition(domain="bearcave.com") location 's3://ianlkaplan-logs.orc/user/iank/http_logs/bearcave.com/';
+ ```
+ 
+ The following query will only return data for the ```bearcave.com``` partition and will only scan the data assocaited with this partition.
+ 
+ ```
+select * from orclogdb.httplogs
+where domain = 'bearcave.com'
+limit 10;
+ ```
+ 
+ Two steps are used here because this makes programatic partitions creation easier.  First the DDL without a partition can be loaded. Then the data can be queries to find the domains.  With the domain list the DDL with the named blank partition can be loaded.  The partitions can then be added using the ```alter table``` statement.
+ 
