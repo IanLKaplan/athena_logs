@@ -25,6 +25,8 @@ Following the AWS practice of providing the minimal permissions needed for the a
  ```
  These permissions allow access to the S3 ORC data, Athena access and the ability to create databases.
  
+ In my .bashrc file I set up the following environment variables:
+ 
  ```
  AWS_REGION="us-west-1"
 
