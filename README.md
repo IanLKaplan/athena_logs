@@ -121,3 +121,6 @@ limit 10;
  
  Two steps are used here because this makes programatic partitions creation easier.  First the DDL without a partition can be loaded. Then the data can be queries to find the domains.  With the domain list the DDL with the named blank partition can be loaded.  The partitions can then be added using the ```alter table``` statement.
  
+ Unlike relational databases, where loading data into a table can be expensive in time and processing resources, there is not cost to dropping and loading Athena tables since all data is stored in the files that Athena scans.
+ 
+ 
