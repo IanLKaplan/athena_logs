@@ -15,4 +15,24 @@ An alternative is to use Athena and SQL queries in place of Elastic Search. This
 
 ## IAM Permissions
 
+Following the AWS practice of providing the minimal permissions needed for the applicaiton, I created a user in AWS Identity and Access Management (IAM): ```athena_user```.  I added three AWS managed policies to this user: 
+```
+ AmazonS3FullAccess
+
+ AmazonAthenaFullAccess
+
+ AWSLakeFormationDataAdmin
+ ```
+ These permissions allow access to the S3 ORC data, Athena access and the ability to create databases.
+ 
+ ```
+ AWS_REGION="us-west-1"
+
+AWS_ATHENA_KEY_ID=<my athena_user security credential ID>
+AWS_ATHENA_ACCESS_KEY=<my athena-user secrect key> 
+
+export AWS_REGION
+export AWS_ATHENA_KEY_ID
+export AWS_ATHENA_ACCESS_KEY
+```
 
